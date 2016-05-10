@@ -32,6 +32,7 @@ class Dispatcher implements DispatcherContract
      *
      * @var array
      */
+    //通配符
     protected $wildcards = [];
 
     /**
@@ -39,6 +40,7 @@ class Dispatcher implements DispatcherContract
      *
      * @var array
      */
+    //有序的事件监听器。
     protected $sorted = [];
 
     /**
@@ -46,6 +48,7 @@ class Dispatcher implements DispatcherContract
      *
      * @var array
      */
+    //事件触发堆栈
     protected $firing = [];
 
     /**
@@ -53,6 +56,7 @@ class Dispatcher implements DispatcherContract
      *
      * @var callable
      */
+    //解析实例队列
     protected $queueResolver;
 
     /**
@@ -74,14 +78,16 @@ class Dispatcher implements DispatcherContract
      * @param  int  $priority
      * @return void
      */
+    //$priority优先级
     public function listen($events, $listener, $priority = 0)
     {
         foreach ((array) $events as $event) {
-            if (Str::contains($event, '*')) {
+            if (Str::contains($event, '*')) {//单一事件是否包含通配符*
                 $this->setupWildcardListen($event, $listener);
             } else {
                 $this->listeners[$event][$priority][] = $this->makeListener($listener);
 
+                //删除有序事件监听器堆栈中相应的事件(如果存在的话)
                 unset($this->sorted[$event]);
             }
         }
@@ -94,6 +100,7 @@ class Dispatcher implements DispatcherContract
      * @param  mixed  $listener
      * @return void
      */
+    //设置通配符监听器数组
     protected function setupWildcardListen($event, $listener)
     {
         $this->wildcards[$event][] = $this->makeListener($listener);
@@ -105,6 +112,7 @@ class Dispatcher implements DispatcherContract
      * @param  string  $eventName
      * @return bool
      */
+    //判断给定事件是否有对应监听器
     public function hasListeners($eventName)
     {
         return isset($this->listeners[$eventName]) || isset($this->wildcards[$eventName]);
@@ -130,6 +138,7 @@ class Dispatcher implements DispatcherContract
      * @param  object|string  $subscriber
      * @return void
      */
+    //注册订阅者
     public function subscribe($subscriber)
     {
         $subscriber = $this->resolveSubscriber($subscriber);
@@ -143,6 +152,7 @@ class Dispatcher implements DispatcherContract
      * @param  object|string  $subscriber
      * @return mixed
      */
+    //解析订阅者实例
     protected function resolveSubscriber($subscriber)
     {
         if (is_string($subscriber)) {
@@ -305,6 +315,7 @@ class Dispatcher implements DispatcherContract
      * @param  string  $eventName
      * @return array
      */
+    //$this->listeners[$event][$priority][] = $this->makeListener($listener);
     protected function sortListeners($eventName)
     {
         $this->sorted[$eventName] = [];
@@ -313,8 +324,9 @@ class Dispatcher implements DispatcherContract
         // so that we can call them in the correct order. We will cache off these
         // sorted event listeners so we do not have to re-sort on every events.
         if (isset($this->listeners[$eventName])) {
-            krsort($this->listeners[$eventName]);
+            krsort($this->listeners[$eventName]); //按键名逆序排序
 
+            //按顺序将监听器归于一个一维索引数组,由于参数是索引数组,故此处按数组先后顺序,后面贴前面,但若是关联数组则同键名后覆盖前
             $this->sorted[$eventName] = call_user_func_array(
                 'array_merge', $this->listeners[$eventName]
             );
@@ -327,6 +339,7 @@ class Dispatcher implements DispatcherContract
      * @param  mixed  $listener
      * @return mixed
      */
+    //判断:监听器是字符串则构建监听器闭包函数
     public function makeListener($listener)
     {
         return is_string($listener) ? $this->createClassListener($listener) : $listener;
@@ -338,6 +351,7 @@ class Dispatcher implements DispatcherContract
      * @param  mixed  $listener
      * @return \Closure
      */
+    //构建监听器闭包函数
     public function createClassListener($listener)
     {
         $container = $this->container;
@@ -356,6 +370,7 @@ class Dispatcher implements DispatcherContract
      * @param  \Illuminate\Container\Container  $container
      * @return callable
      */
+    //listener是一个控制器带方法的url还是一个单纯的Class url(默认handle方法)
     protected function createClassCallable($listener, $container)
     {
         list($class, $method) = $this->parseClassCallable($listener);
@@ -373,6 +388,7 @@ class Dispatcher implements DispatcherContract
      * @param  string  $listener
      * @return array
      */
+    //方法@隔开,默认artisan生成的handle方法
     protected function parseClassCallable($listener)
     {
         $segments = explode('@', $listener);
@@ -386,6 +402,7 @@ class Dispatcher implements DispatcherContract
      * @param  string  $class
      * @return bool
      */
+    //检测listener类是否继承了'Illuminate\Contracts\Queue\ShouldQueue'接口
     protected function handlerShouldBeQueued($class)
     {
         try {
@@ -404,6 +421,7 @@ class Dispatcher implements DispatcherContract
      * @param  string  $method
      * @return \Closure
      */
+    //若类中存在queue方法,则在不调用构造函数的情况下调用queue方法
     protected function createQueuedHandlerCallable($class, $method)
     {
         return function () use ($class, $method) {
@@ -425,6 +443,7 @@ class Dispatcher implements DispatcherContract
      * @param  array  $arguments
      * @return array
      */
+    //过滤参数数组,是对象则克隆,不是则不处理
     protected function cloneArgumentsForQueueing(array $arguments)
     {
         return array_map(function ($a) {
@@ -440,6 +459,7 @@ class Dispatcher implements DispatcherContract
      * @param  array  $arguments
      * @return void
      */
+    //不调用监听器类的构造函数去创建新的类实例
     protected function callQueueMethodOnHandler($class, $method, $arguments)
     {
         $handler = (new ReflectionClass($class))->newInstanceWithoutConstructor();
@@ -455,6 +475,7 @@ class Dispatcher implements DispatcherContract
      * @param  string  $event
      * @return void
      */
+    //删除对应已缓存的事件监听器集合:通配的,刚输入的,已排序的>>>[wildcards,listeners,sorted]
     public function forget($event)
     {
         if (Str::contains($event, '*')) {

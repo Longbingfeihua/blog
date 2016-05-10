@@ -16,7 +16,7 @@ class RegisterFacades
      */
     public function bootstrap(Application $app)
     {
-        Facade::clearResolvedInstances();
+        Facade::clearResolvedInstances(); //初次启动时,清除内存中所有已经实例化的类
 
         Facade::setFacadeApplication($app);
         //$app->make('config')返回Repository对象

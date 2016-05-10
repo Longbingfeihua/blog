@@ -146,7 +146,7 @@ abstract class Facade
             return $name;
         }
 
-        if (isset(static::$resolvedInstance[$name])) {
+        if (isset(static::$resolvedInstance[$name])) { //每次加载完存储 减少实例化类消耗类存
             return static::$resolvedInstance[$name];
         }
         //ArrayAccess:实际调用了$app->offsetGet();最终调用了$app->make($name);

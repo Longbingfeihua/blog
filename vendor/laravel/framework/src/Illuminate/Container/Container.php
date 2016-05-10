@@ -295,6 +295,9 @@ class Container implements ArrayAccess, ContainerContract
      */
     public function share(Closure $closure)
     {
+//        $this->app['router'] = $this->app->share(function ($app) {
+//            return new Router($app['events'], $app);
+//        });
         return function ($container) use ($closure) {
             // We'll simply declare a static variable within the Closures and if it has
             // not been set we will execute the given Closures to resolve this value
@@ -646,7 +649,6 @@ class Container implements ArrayAccess, ContainerContract
         if (isset($this->instances[$abstract])) {
             return $this->instances[$abstract];
         }
-
         //要么返回一个闭包对象，要么返回一个字符串,判断下一步是build还是继续make递归
         //$concrete = $abstract或者 '\'.$abstruct 或者 closure;
         $concrete = $this->getConcrete($abstract);
