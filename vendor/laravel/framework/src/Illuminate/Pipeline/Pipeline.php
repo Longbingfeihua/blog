@@ -66,10 +66,10 @@ class Pipeline implements PipelineContract
      * @param  array|mixed  $pipes
      * @return $this
      */
-    //设定中间件管道
+    //设定中间件管道数组,middleware
     public function through($pipes)
     {
-        //若$pipes不是数组,如果只有一个,则(array)可转换,为兼容多个,利用func_get_args()最好不过.
+        //若$pipes不是数组,如果只有一个,则(array)就可转换,为兼容多个,利用func_get_args()最好不过.
         $this->pipes = is_array($pipes) ? $pipes : func_get_args();
         return $this;
     }
@@ -138,6 +138,7 @@ class Pipeline implements PipelineContract
      */
     //->function ($request) {$this->app->instance('request', $request);return $this->router->dispatch
     //($request)};
+    //$passable即$request
     protected function getInitialSlice(Closure $destination)
     {
         return function ($passable) use ($destination) {

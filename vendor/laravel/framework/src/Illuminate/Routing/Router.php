@@ -90,6 +90,7 @@ class Router implements RegistrarContract
      *
      * @var array
      */
+    //全局可用参数式样
     protected $patterns = [];
 
     /**

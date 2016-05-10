@@ -124,10 +124,10 @@ class Kernel implements KernelContract
         $this->bootstrap();
         //dd($this->app->make('request'));
         return (new Pipeline($this->app))
-                    ->send($request) //设置可通过的请求 $passable
+                    ->send($request) //the object being passed through the pipeline.
                     ->through($this->app->shouldSkipMiddleware() ? [] : $this->middleware)
                    //是否需要屏蔽中间件app()->bind('middleware.disable',function(){return true;});
-                    ->then($this->dispatchToRouter());
+                    ->then($this->dispatchToRouter());//分发到路由
     }
 
     /**

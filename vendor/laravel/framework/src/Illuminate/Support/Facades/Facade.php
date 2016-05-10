@@ -212,7 +212,7 @@ abstract class Facade
 
         switch (count($args)) {
             case 0:
-                return $instance->$method();
+                return $instance->$method(); //实际调用的是instance里的非静态方法
 
             case 1:
                 return $instance->$method($args[0]);

@@ -21,7 +21,13 @@ Route::get('/',['middleware'=>'test',function () {
 //    $string =  'http://www.php.net/kotana/lala/index.html';
 //    preg_match('#/([^/]+)#',$string,$arr,0,18);
 //    print_r($arr);
-    return view('errors.show');
+//    $arr = ['hello','iam','carry'];
+//    function mix($a,$b){
+//        echo $a.PHP_EOL;
+//        return ucfirst($a).ucfirst($b);
+//    }
+//    return array_reduce($arr,'mix','everyone');
+//    return spl_autoload_functions();
 }]);
 //preg_match()返回 pattern 的匹配次数。 它的值将是0次（不匹配）或1次，因为preg_match()在第一次匹配后 将会停止搜索。
 //preg_match_all()不同于此，它会一直搜索subject 直到到达结尾。 如果发生错误preg_match()返回 FALSE。
