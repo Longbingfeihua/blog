@@ -28,6 +28,8 @@ Route::get('/',['middleware'=>'test',function () {
 //    }
 //    return array_reduce($arr,'mix','everyone');
 //    return spl_autoload_functions();
+//    dd(Event::getListeners('App\Event\TestEvent'));
+    dd(Event::fire('App\Events\TestEvent'));
 }]);
 //preg_match()返回 pattern 的匹配次数。 它的值将是0次（不匹配）或1次，因为preg_match()在第一次匹配后 将会停止搜索。
 //preg_match_all()不同于此，它会一直搜索subject 直到到达结尾。 如果发生错误preg_match()返回 FALSE。

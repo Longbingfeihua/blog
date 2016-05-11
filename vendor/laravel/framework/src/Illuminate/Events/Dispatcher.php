@@ -82,7 +82,7 @@ class Dispatcher implements DispatcherContract
     public function listen($events, $listener, $priority = 0)
     {
         foreach ((array) $events as $event) {
-            if (Str::contains($event, '*')) {//单一事件是否包含通配符*
+            if (Str::contains($event, '*')) {//包含通配符*,同一个监听器拦截多个事件,无优先级.
                 $this->setupWildcardListen($event, $listener);
             } else {
                 $this->listeners[$event][$priority][] = $this->makeListener($listener);
@@ -203,45 +203,42 @@ class Dispatcher implements DispatcherContract
      * @param  bool  $halt
      * @return array|null
      */
+    //$halt  此事件对应的监听器集合中第一个返回值不为空时,是否停止执行后续监听器
     public function fire($event, $payload = [], $halt = false)
     {
-        // When the given "event" is actually an object we will assume it is an event
-        // object and use the class as the event name and this event itself as the
-        // payload to the handler, which makes object based events quite simple.
+        //若给定事件参数是一个对象,programme假设此参数是事件对象,将对象类名作为事件名,对象本身作为handle参数,这将使基于对象的事件处理变得非常简单.
         if (is_object($event)) {
             list($payload, $event) = [[$event], get_class($event)];
         }
 
         $responses = [];
 
-        // If an array is not given to us as the payload, we will turn it into one so
-        // we can easily use call_user_func_array on the listeners, passing in the
-        // payload to each of them so that they receive each of these arguments.
+        //$payload设置为array可方便call_user_func_array($func,$arr)逐个调用
         if (! is_array($payload)) {
-            $payload = [$payload];
+            $payload = [$payload];//(array)$payload
         }
-
+        //放入即将触发的事件堆栈
         $this->firing[] = $event;
 
+        //是否需要广播
         if (isset($payload[0]) && $payload[0] instanceof ShouldBroadcast) {
             $this->broadcastEvent($payload[0]);
         }
-
+        //根据事件获取监听器集合
         foreach ($this->getListeners($event) as $listener) {
+            //带参数$payload调用监听器闭包
+            //$listener默认触发handle方法.
             $response = call_user_func_array($listener, $payload);
 
-            // If a response is returned from the listener and event halting is enabled
-            // we will just return this response, and not call the rest of the event
-            // listeners. Otherwise we will add the response on the response list.
+            //如果监听器返回了response,若$halt == true,programme将返回此response,不会触发剩余的监听器,否则此response将会被放入到response数组.
             if (! is_null($response) && $halt) {
+                //移除此event
                 array_pop($this->firing);
 
                 return $response;
             }
 
-            // If a boolean false is returned from a listener, we will stop propagating
-            // the event to any further listeners down in the chain, else we keep on
-            // looping through the listeners and firing every one in our sequence.
+            //如果一个监听器返回false,programme将停止遍历监听链上后续监听器,否则programme将循环遍历监听器集合,并依次触发.
             if ($response === false) {
                 break;
             }
