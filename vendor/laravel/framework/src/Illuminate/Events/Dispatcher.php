@@ -231,6 +231,7 @@ class Dispatcher implements DispatcherContract
             $response = call_user_func_array($listener, $payload);
 
             //如果监听器返回了response,若$halt == true,programme将返回此response,不会触发剩余的监听器,否则此response将会被放入到response数组.
+            //停止一个事件传播到其它的侦听器。你可以通过在侦听器的监听方法(如果没有设置的话为handle())中返回 false 来实现
             if (! is_null($response) && $halt) {
                 //移除此event
                 array_pop($this->firing);

@@ -22,7 +22,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        $this->app->bind('Illuminate\Kotana\Ko');
-        class_alias('Illuminate\Support\Facades\Kotana','KOKO');//或者在config\app的aliases中定义.
+        //
     }
 }

@@ -25,8 +25,6 @@ class EventServiceProvider extends ServiceProvider
     public function boot(DispatcherContract $events)
     {
         parent::boot($events);
-
-        $events->listen('App\Events\TestEvent','App\Listeners\testListener');
-        $events->listen('App\Events\TestEvent','App\Listeners\testListener2',1);
+        //
     }
 }
