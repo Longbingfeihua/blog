@@ -110,6 +110,8 @@ class Route
             $this->methods[] = 'HEAD';
         }
 
+        //prefix可以设置在group的attributes数组中,也可以设置在$action数组中,同时存在则后面拼接前面.
+        //Route::get('index',['prefix'=>'shift','uses'=>'xxx@xxx']);
         if (isset($this->action['prefix'])) {
             $this->prefix($this->action['prefix']);
         }

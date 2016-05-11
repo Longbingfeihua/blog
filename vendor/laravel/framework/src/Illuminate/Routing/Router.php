@@ -98,7 +98,7 @@ class Router implements RegistrarContract
      *
      * @var array
      */
-    protected $groupStack = [];
+    public $groupStack = [];
 
     /**
      * All of the verbs supported by the router.
@@ -348,11 +348,9 @@ class Router implements RegistrarContract
     public function group(array $attributes, Closure $callback)
     {
         $this->updateGroupStack($attributes);
+        //当更新完groupStack后,programme将执行callback闭包,并在路由生成后合并组属性.执行完闭包后从堆栈删除此属性
 
-        // Once we have updated the group stack, we will execute the user Closure and
-        // merge in the groups attributes when the route is created. After we have
-        // run the callback, we will pop the attributes off of this group stack.
-        call_user_func($callback, $this);
+        call_user_func($callback, $this); //分组路由的闭包是立即执行的,而其他方法诸如get,post之类的是注册后执行.
 
         array_pop($this->groupStack);
     }
@@ -396,20 +394,21 @@ class Router implements RegistrarContract
 
         $new['prefix'] = static::formatGroupPrefix($new, $old);
 
-        if (isset($new['domain'])) {
+        if (isset($new['domain'])) { //domain 新的替换旧的
             unset($old['domain']);
         }
 
-        $new['where'] = array_merge(
+        $new['where'] = array_merge( //where合并
             isset($old['where']) ? $old['where'] : [],
             isset($new['where']) ? $new['where'] : []
         );
 
-        if (isset($old['as'])) {
+        if (isset($old['as'])) { //as拼接
             $new['as'] = $old['as'].(isset($new['as']) ? $new['as'] : '');
         }
 
         return array_merge_recursive(Arr::except($old, ['namespace', 'prefix', 'where', 'as']), $new);
+        //array_merge_recursive($a,$b)相同键名则值合并为数组
     }
 
     /**
@@ -419,6 +418,8 @@ class Router implements RegistrarContract
      * @param  array  $old
      * @return string|null
      */
+    //如果new没有namespace则用old的namespace或old没有则为null
+    //如果new和old都有namespace,则拼接
     protected static function formatUsesPrefix($new, $old)
     {
         if (isset($new['namespace'])) {
@@ -437,6 +438,8 @@ class Router implements RegistrarContract
      * @param  array  $old
      * @return string|null
      */
+    //old和new都有prefix则拼接
+    //new没有prefix则用old,或old也没有则prefix为null
     protected static function formatGroupPrefix($new, $old)
     {
         $oldPrefix = isset($old['prefix']) ? $old['prefix'] : null;
@@ -472,6 +475,7 @@ class Router implements RegistrarContract
      * @param  \Closure|array|string  $action
      * @return \Illuminate\Routing\Route
      */
+    //返回一个Route实例
     protected function addRoute($methods, $uri, $action)
     {
         return $this->routes->add($this->createRoute($methods, $uri, $action));
@@ -485,26 +489,24 @@ class Router implements RegistrarContract
      * @param  mixed   $action
      * @return \Illuminate\Routing\Route
      */
+    //生成一个\Illuminate\Routing\Route实例
+    //action可以是controller@method or ['uses'=>'controller@method' or 'uses' => closure] or closure
     protected function createRoute($methods, $uri, $action)
     {
-        // If the route is routing to a controller we will parse the route action into
-        // an acceptable array format before registering it and creating this route
-        // instance itself. We need to build the Closure that will call this out.
+        //如果路由是指向控制器的,programme会在注册此路由以及实例化前将其action参数解析为一个可接受的数组格式,programme将会构建调用此参数的闭包函数.
+      //["uses" => "App\Http\Controllers\kiki\Message@index","controller" => "App\Http\Controllers\kiki\Message@index"]
         if ($this->actionReferencesController($action)) {
             $action = $this->convertToControllerAction($action);
         }
-
         $route = $this->newRoute(
             $methods, $this->prefix($uri), $action
         );
 
-        // If we have groups that need to be merged, we will merge them now after this
-        // route has already been created and is ready to go. After we're done with
-        // the merge we will be ready to return the route back out to the caller.
-        if ($this->hasGroupStack()) {
+        //如果存在需要合并的组,programme将会在此合并,此后,路由已经创建完成并准备发送,group合并完成后,程序将会将路由返回给调用者.
+        if ($this->hasGroupStack()) {//return !empty($this->groupStack)
             $this->mergeGroupAttributesIntoRoute($route);
         }
-
+//        dd($route);
         $this->addWhereClausesToRoute($route);
 
         return $route;
@@ -529,6 +531,7 @@ class Router implements RegistrarContract
      * @param  string  $uri
      * @return string
      */
+    //拼接路由和前缀
     protected function prefix($uri)
     {
         return trim(trim($this->getLastGroupPrefix(), '/').'/'.trim($uri, '/'), '/') ?: '/';
@@ -540,6 +543,8 @@ class Router implements RegistrarContract
      * @param  \Illuminate\Routing\Route  $route
      * @return \Illuminate\Routing\Route
      */
+    //Route::get('xx',function(){})->where();
+    //where方法做路由参数的正则判断.
     protected function addWhereClausesToRoute($route)
     {
         $where = isset($route->getAction()['where']) ? $route->getAction()['where'] : [];
@@ -568,6 +573,7 @@ class Router implements RegistrarContract
      * @param  array  $action
      * @return bool
      */
+    //检测该action是否指向一个控制器
     protected function actionReferencesController($action)
     {
         if ($action instanceof Closure) {
@@ -588,14 +594,12 @@ class Router implements RegistrarContract
         if (is_string($action)) {
             $action = ['uses' => $action];
         }
-
         // Here we'll merge any group "uses" statement if necessary so that the action
         // has the proper clause for this property. Then we can simply set the name
         // of the controller on the action and return the action array for usage.
         if (! empty($this->groupStack)) {
             $action['uses'] = $this->prependGroupUses($action['uses']);
         }
-
         // Here we will set this controller name on the action array just so we always
         // have a copy of it for reference if we need it. This can be used while we
         // search for a controller name or do some other type of fetch operation.
@@ -610,11 +614,13 @@ class Router implements RegistrarContract
      * @param  string  $uses
      * @return string
      */
+    //用group最后的uses拼接use子语句
     protected function prependGroupUses($uses)
     {
         $group = end($this->groupStack);
 
         return isset($group['namespace']) && strpos($uses, '\\') !== 0 ? $group['namespace'].'\\'.$uses : $uses;
+        //$uses开头若为'\'则控制器必须是完整的命名空间路径,否则继承大组的命名空间.
     }
 
     /**

@@ -226,7 +226,7 @@ class Dispatcher implements DispatcherContract
         }
         //根据事件获取监听器集合
         foreach ($this->getListeners($event) as $listener) {
-            //带参数$payload调用监听器闭包
+            //带参数$payload调用监听器闭包,此处是逐个调用$payload数组的值:若想获取详细值$arr,则$payload应为[$arr]
             //$listener默认触发handle方法.
             $response = call_user_func_array($listener, $payload);
 

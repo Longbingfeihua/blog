@@ -40,5 +40,6 @@ class RouteServiceProvider extends ServiceProvider
         $router->group(['namespace' => $this->namespace], function ($router) {
             require app_path('Http/routes.php');
         });
+        //启动完之后$groupStack == [];
     }
 }

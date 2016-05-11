@@ -10,7 +10,10 @@ use App\Jobs\StoreMessage;
 
 class Message extends Controller
 {
+    public function index(){
+        return 123;
+    }
     public function create(Request $request){
-        
+
     }
 }

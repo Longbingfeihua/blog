@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Contracts\Events\Dispatcher as DispatcherContract;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 
 class EventServiceProvider extends ServiceProvider
@@ -26,5 +27,9 @@ class EventServiceProvider extends ServiceProvider
     {
         parent::boot($events);
         //
+
+        Event::listen('route1',function($a){
+            Log::info(var_export($a,1));
+        });
     }
 }
