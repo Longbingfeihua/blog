@@ -834,6 +834,10 @@ class Request extends SymfonyRequest implements ArrayAccess
      * @param  \Closure  $callback
      * @return $this
      */
+    //设置routeResolver 调用后返回当前uri 对应的route实例
+    //$this->routeResolver = function()use($route){
+            //return $route;
+    //}
     public function setRouteResolver(Closure $callback)
     {
         $this->routeResolver = $callback;

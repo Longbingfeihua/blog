@@ -203,7 +203,7 @@ class Dispatcher implements DispatcherContract
      * @param  bool  $halt
      * @return array|null
      */
-    //$halt  此事件对应的监听器集合中第一个返回值不为空时,是否停止执行后续监听器
+    //$halt  此事件对应的监听器集合中第一个返回值不为空时,是否停止执行后续其他的监听器
     public function fire($event, $payload = [], $halt = false)
     {
         //若给定事件参数是一个对象,programme假设此参数是事件对象,将对象类名作为事件名,对象本身作为handle参数,这将使基于对象的事件处理变得非常简单.

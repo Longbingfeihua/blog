@@ -18,6 +18,16 @@ class RouteCollection implements Countable, IteratorAggregate
      *
      * @var array
      */
+//    array:3 [▼
+//    "GET" => array:4 [▼
+//    "bilibili/api/index" => Route {#99 ▶}
+//    "api/hash" => Route {#101 ▶}
+//    "merge" => Route {#102 ▶}
+//    "xxx/nn/has" => Route {#107 ▶}
+//    ]
+//    "HEAD" => array:4 [▶]
+//    "POST" => array:1 [▶]
+//    ]
     protected $routes = [];
 
     /**
@@ -25,6 +35,23 @@ class RouteCollection implements Countable, IteratorAggregate
      *
      * @var array
      */
+//    array:5 [▼
+//    0 => Route {#99 ▼
+//        #uri: "bilibili/api/index"
+//        #methods: array:2 [▶]
+//        #action: array:6 [▶]
+//        #defaults: []
+//        #wheres: []
+//        #parameters: null
+//        #parameterNames: null
+//        #compiled: null
+//        #container: Application {#2 ▶}
+//    }
+//    1 => Route {#101 ▶}
+//    2 => Route {#102 ▶}
+//    3 => Route {#104 ▶}
+//    4 => Route {#107 ▶}
+//    ]
     protected $allRoutes = [];
 
     /**
@@ -138,20 +165,19 @@ class RouteCollection implements Countable, IteratorAggregate
      */
     public function match(Request $request)
     {
+        //获取所有已注册的路由中请求方法为$request->getMethod()的路由,uri为key,route实例为value
+        //若$request->getMethod()为空,则返回所有注册的路由组成的索引数组.
         $routes = $this->get($request->getMethod());
 
-        // First, we will see if we can find a matching route for this current request
-        // method. If we can, great, we can just return it so that it can be called
-        // by the consumer. Otherwise we will check for routes with another verb.
+        //检测是否有路由与当前request匹配,有返回$route实例,没有则返回null
         $route = $this->check($routes, $request);
 
+        //找到匹配则绑定路由和$request
         if (! is_null($route)) {
-            return $route->bind($request);
+            return $route->bind($request); //处理并返回route实例
         }
 
-        // If no route was found we will now check if a matching route is specified by
-        // another HTTP verb. If it is we will need to throw a MethodNotAllowed and
-        // inform the user agent of which HTTP verb it should use for this route.
+        //如果返回null,programme将检测该请求是否被指定了其他的http方法,如果是,则抛出MethodNotAllowed异常,并通知客户端该用哪种方法.
         $others = $this->checkForAlternateVerbs($request);
 
         if (count($others) > 0) {
@@ -171,9 +197,7 @@ class RouteCollection implements Countable, IteratorAggregate
     {
         $methods = array_diff(Router::$verbs, [$request->getMethod()]);
 
-        // Here we will spin through all verbs except for the current request verb and
-        // check to see if any routes respond to them. If they do, we will return a
-        // proper error response with the correct headers on the response string.
+        //遍历除当前request的方法外的所有方法,检测是否有响应,如果有,我们将正确时方法通过error response显示在返回中.
         $others = [];
 
         foreach ($methods as $method) {
@@ -227,6 +251,7 @@ class RouteCollection implements Countable, IteratorAggregate
      * @param  bool  $includingMethod
      * @return \Illuminate\Routing\Route|null
      */
+    //若请求的uri不是RouteCollection->routes或allRoutes集合中的第一个,则之前的路由也会进行$route->matches匹配和参数正则编译
     protected function check(array $routes, $request, $includingMethod = true)
     {
         return Arr::first($routes, function ($key, $value) use ($request, $includingMethod) {

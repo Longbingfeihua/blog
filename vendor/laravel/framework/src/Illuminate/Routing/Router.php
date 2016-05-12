@@ -90,7 +90,7 @@ class Router implements RegistrarContract
      *
      * @var array
      */
-    //全局可用参数式样
+    //全局限制
     protected $patterns = [];
 
     /**
@@ -345,14 +345,15 @@ class Router implements RegistrarContract
      * @param  \Closure  $callback
      * @return void
      */
+    //group提供分组属性叠加和消除操作.
     public function group(array $attributes, Closure $callback)
     {
         $this->updateGroupStack($attributes);
         //当更新完groupStack后,programme将执行callback闭包,并在路由生成后合并组属性.执行完闭包后从堆栈删除此属性
-
-        call_user_func($callback, $this); //分组路由的闭包是立即执行的,而其他方法诸如get,post之类的是注册后执行.
-
-        array_pop($this->groupStack);
+        //分组路由的闭包是立即执行的,执行完成之前属性一直叠加,执行完之后array_pop属性.
+        call_user_func($callback, $this);
+        //最后一个被array_pop的永远是map()里面初始化调用的group属性.
+        array_pop($this->groupStack);//为保持同级group调用相同的父级属性.
     }
 
     /**
@@ -361,9 +362,11 @@ class Router implements RegistrarContract
      * @param  array  $attributes
      * @return void
      */
+    //end($this->groupStack)为当前闭包的上一级闭包对应的group属性
     protected function updateGroupStack(array $attributes)
     {
         if (! empty($this->groupStack)) {
+
             $attributes = $this->mergeGroup($attributes, end($this->groupStack));
         }
 
@@ -456,6 +459,7 @@ class Router implements RegistrarContract
      *
      * @return string
      */
+    //获取父级组prefix属性
     public function getLastGroupPrefix()
     {
         if (! empty($this->groupStack)) {
@@ -489,24 +493,25 @@ class Router implements RegistrarContract
      * @param  mixed   $action
      * @return \Illuminate\Routing\Route
      */
-    //生成一个\Illuminate\Routing\Route实例
-    //action可以是controller@method or ['uses'=>'controller@method' or 'uses' => closure] or closure
+    //生成一个\Illuminate\Routing\Route实例;
+    //action可以是controller@method or ['uses'=>'controller@method' or 'uses' => closure] or closure;
+    //map()中的闭包 require() 一次性调用了所有的methods;
     protected function createRoute($methods, $uri, $action)
     {
         //如果路由是指向控制器的,programme会在注册此路由以及实例化前将其action参数解析为一个可接受的数组格式,programme将会构建调用此参数的闭包函数.
-      //["uses" => "App\Http\Controllers\kiki\Message@index","controller" => "App\Http\Controllers\kiki\Message@index"]
+       //["uses" => "App\Http\Controllers\kiki\Message@index","controller" => "App\Http\Controllers\kiki\Message@index"]
         if ($this->actionReferencesController($action)) {
             $action = $this->convertToControllerAction($action);
         }
         $route = $this->newRoute(
             $methods, $this->prefix($uri), $action
         );
-
-        //如果存在需要合并的组,programme将会在此合并,此后,路由已经创建完成并准备发送,group合并完成后,程序将会将路由返回给调用者.
+        //如果存在父级组属性,programme将会在此合并,此后,路由已经创建完成并准备发送,group合并完成后,程序将会将路由返回给调用者.
+        //调用此方法时父级组闭包还未执行完成,组属性还未pop
         if ($this->hasGroupStack()) {//return !empty($this->groupStack)
             $this->mergeGroupAttributesIntoRoute($route);
         }
-//        dd($route);
+
         $this->addWhereClausesToRoute($route);
 
         return $route;
@@ -545,10 +550,15 @@ class Router implements RegistrarContract
      */
     //Route::get('xx',function(){})->where();
     //where方法做路由参数的正则判断.
+    //Route->where()
     protected function addWhereClausesToRoute($route)
     {
+        //where可放于action数组,但值只能是数组形式:['uses'=>Closure,'where'=>['id'=>'^sign[1]{2}$']]
         $where = isset($route->getAction()['where']) ? $route->getAction()['where'] : [];
 
+        //where在创建Route实例后调用其where()方法,直接存于$this->where数组
+        //形式:Route::get(xxxx)->where('id','reg')或Route::get(xxx)->where(['id'=>'reg','name'=>'reg'])
+        //$this->patterns为全局限制,可在服务提供者boot方法中设置.
         $route->where(array_merge($this->patterns, $where));
 
         return $route;
@@ -594,15 +604,13 @@ class Router implements RegistrarContract
         if (is_string($action)) {
             $action = ['uses' => $action];
         }
-        // Here we'll merge any group "uses" statement if necessary so that the action
-        // has the proper clause for this property. Then we can simply set the name
-        // of the controller on the action and return the action array for usage.
+
+        //存在父级组namespace属性时,拼接完整的子语句uses路径.
         if (! empty($this->groupStack)) {
             $action['uses'] = $this->prependGroupUses($action['uses']);
         }
-        // Here we will set this controller name on the action array just so we always
-        // have a copy of it for reference if we need it. This can be used while we
-        // search for a controller name or do some other type of fetch operation.
+
+        //生成controller属性备用
         $action['controller'] = $action['uses'];
 
         return $action;
@@ -614,13 +622,13 @@ class Router implements RegistrarContract
      * @param  string  $uses
      * @return string
      */
-    //用group最后的uses拼接use子语句
+    //uses拼接父级命名空间
+    //uses开头若为'\'则programme认为其包含完整的命名路径,不会拼接父级组的namespace.
     protected function prependGroupUses($uses)
     {
         $group = end($this->groupStack);
 
         return isset($group['namespace']) && strpos($uses, '\\') !== 0 ? $group['namespace'].'\\'.$uses : $uses;
-        //$uses开头若为'\'则控制器必须是完整的命名空间路径,否则继承大组的命名空间.
     }
 
     /**
@@ -629,24 +637,23 @@ class Router implements RegistrarContract
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
+    //向已配置好的路由实例发送$request实例,来自Illuminate\Foundation\Http\kernel
     public function dispatch(Request $request)
     {
         $this->currentRequest = $request;
 
-        // If no response was returned from the before filter, we will call the proper
-        // route instance to get the response. If no route is found a response will
-        // still get returned based on why no routes were found for this request.
+        //调用由$this->before($callback)注册的router.before监听事件.
+        //如果before无响应,programme将会请求其他合适的实例来获取响应,如果无合适实例,programme将会返回一个无响应缘由.
         $response = $this->callFilter('before', $request);
 
         if (is_null($response)) {
             $response = $this->dispatchToRoute($request);
         }
 
-        // Once this route has run and the response has been prepared, we will run the
-        // after filter to do any last work on the response or for this application
-        // before we will return the response back to the consuming code for use.
+        //生成response实例
         $response = $this->prepareResponse($request, $response);
 
+        //在$response被消费前触发由$this->after($callback)注册的router.after监听事件.去处理一些基于响应或app的后续操作
         $this->callFilter('after', $request, $response);
 
         return $response;
@@ -660,21 +667,18 @@ class Router implements RegistrarContract
      */
     public function dispatchToRoute(Request $request)
     {
-        // First we will find a route that matches this request. We will also set the
-        // route resolver on the request so middlewares assigned to the route will
-        // receive access to this route instance for checking of the parameters.
+        //找出对应$request的路由,解析路由,此外路由分配的中间件可以进入路由实例检验参数
         $route = $this->findRoute($request);
 
         $request->setRouteResolver(function () use ($route) {
             return $route;
         });
 
+        //触发matched()生成的监听事件
         $this->events->fire('router.matched', [$route, $request]);
 
-        // Once we have successfully matched the incoming request to a given route we
-        // can call the before filters on that route. This works similar to global
-        // filters in that if a response is returned we will not call the route.
-        $response = $this->callRouteBefore($route, $request);
+        //一旦成功将一个即将到来的请求匹配到给定的route上,我们可以对此路由使用before filters,这和全局filter相似,如果一个响应被返回,我们将不会调用此route
+        $response = $this->callRouteBefore($route, $request); //deprecated since version 5.1
 
         if (is_null($response)) {
             $response = $this->runRouteWithinStack(
@@ -687,7 +691,7 @@ class Router implements RegistrarContract
         // After we have a prepared response from the route or filter we will call to
         // the "after" filters to do any last minute processing on this request or
         // response object before the response is returned back to the consumer.
-        $this->callRouteAfter($route, $request, $response);
+        $this->callRouteAfter($route, $request, $response); //deprecated since version 5.1
 
         return $response;
     }

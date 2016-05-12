@@ -24,7 +24,9 @@ class RouteServiceProvider extends ServiceProvider
      */
     public function boot(Router $router)
     {
-        //
+        //此处可定义全局限制格式,填充$outer的$patterns属性
+        //$router->pattern($key,$value);
+        //$router->patterns([$key=>$value]);
 
         parent::boot($router);
     }
@@ -38,8 +40,7 @@ class RouteServiceProvider extends ServiceProvider
     public function map(Router $router)
     {
         $router->group(['namespace' => $this->namespace], function ($router) {
-            require app_path('Http/routes.php');
+            require app_path('Http/routes.php');//载入routes.php,调用所有group()
         });
-        //启动完之后$groupStack == [];
     }
 }

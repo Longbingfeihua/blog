@@ -123,6 +123,7 @@ class Route
      * @param  \Illuminate\Http\Request  $request
      * @return mixed
      */
+    //此处调用controller
     public function run(Request $request)
     {
         $this->container = $this->container ?: new Container;
@@ -236,8 +237,10 @@ class Route
      */
     protected function compileRoute()
     {
+        //提取路由参数
         $optionals = $this->extractOptionalParameters();
 
+        //去除$uri参数中的'?'
         $uri = preg_replace('/\{(\w+?)\?\}/', '{$1}', $this->uri);
 
         $this->compiled = with(
@@ -254,6 +257,7 @@ class Route
      */
     protected function extractOptionalParameters()
     {
+        //匹配uri中所有包含'{字母数字?}'形式的字符,并提取{}中的字符
         preg_match_all('/\{(\w+?)\?\}/', $this->uri, $matches);
 
         return isset($matches[1]) ? array_fill_keys($matches[1], null) : [];
@@ -265,16 +269,19 @@ class Route
      * @param  array|string|null $middleware
      * @return $this|array
      */
+    //获取middleware
     public function middleware($middleware = null)
     {
+        //为空则直接返回action中的'middleware'元素值
         if (is_null($middleware)) {
             return (array) Arr::get($this->action, 'middleware', []);
         }
 
+        //是字符串形式的middleware-key 则加入middleware预处理数组
         if (is_string($middleware)) {
             $middleware = [$middleware];
         }
-
+        //合并
         $this->action['middleware'] = array_merge(
             (array) Arr::get($this->action, 'middleware', []), $middleware
         );
@@ -520,6 +527,7 @@ class Route
      */
     public function bind(Request $request)
     {
+        //编译路由参数
         $this->compileRoute();
 
         $this->bindParameters($request);
@@ -533,20 +541,16 @@ class Route
      * @param  \Illuminate\Http\Request  $request
      * @return array
      */
+    //从request中解析出路由参数
     public function bindParameters(Request $request)
     {
-        // If the route has a regular expression for the host part of the URI, we will
-        // compile that and get the parameter matches for this domain. We will then
-        // merge them into this parameters array so that this array is completed.
+        //如果当前路由含有过滤uri前host部分的Regex,programme会去编译它,获取匹配domain的参数merge到参数数组以完成参数编译.
         $params = $this->matchToKeys(
 
             array_slice($this->bindPathParameters($request), 1)
 
         );
 
-        // If the route has a regular expression for the host part of the URI, we will
-        // compile that and get the parameter matches for this domain. We will then
-        // merge them into this parameters array so that this array is completed.
         if (! is_null($this->compiled->getHostRegex())) {
             $params = $this->bindHostParameters(
                 $request, $params
@@ -774,6 +778,7 @@ class Route
      * @param  string  $expression
      * @return array
      */
+    //where($key,$reg) or where([$key1=>$reg1,...])
     protected function parseWhere($name, $expression)
     {
         return is_array($name) ? $name : [$name => $expression];
